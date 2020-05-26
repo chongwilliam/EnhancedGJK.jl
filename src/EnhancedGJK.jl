@@ -12,16 +12,20 @@ using LinearAlgebra
 using Statistics: mean
 
 export CollisionCache,
-       gjk!,
-       gjk,
+       gjk!,  # signed volume method
+       gjk,  # signed volume method
+       gjk_original,  # johnson method
+       gjk_original!, # johnson method
        GJKResult,
        NeighborMesh,
        ReferenceDistance,
        closest_point_in_world,
        closest_point_in_body,
        separation_distance,
-       simplex_penetration_distance
-
+       simplex_penetration_distance,
+       linear_combination,
+       normal,  # PCA method
+       normal_test  # PCA method unit test
 
 include("tagged_points.jl")
 include("simplices.jl")
@@ -30,5 +34,6 @@ include("neighbor_mesh.jl")
 include("traits.jl")
 include("gjk.jl")
 include("reference_distance.jl")
+include("contact_normal.jl")
 
 end # module
