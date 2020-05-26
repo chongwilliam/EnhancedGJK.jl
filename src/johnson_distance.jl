@@ -84,7 +84,11 @@ function S3D(simplex::SVector{M, SVector{N, T}}, opt::Int) where {M,N,T}
         return lam, w_ind
     else
         # print("S3D Condition 2", "\n")
+<<<<<<< HEAD
         d = Inf
+=======
+        d = 1e5
+>>>>>>> f200eefa30d492d87f3a2803a7cca18328f50c04
         for i = 1:4
             if FacetsTest[i] == 0
                 new_ind = MVector{4,Int}(1, 1, 1, 1)
@@ -176,7 +180,11 @@ function S2D(simplex::SVector{M, SVector{N, T}}, ind::MVector{M,P}, opt::Int) wh
         return lam, w_ind
     else
         # print("S2D Condition 2", "\n")
+<<<<<<< HEAD
         d = Inf
+=======
+        d = 1e5
+>>>>>>> f200eefa30d492d87f3a2803a7cca18328f50c04
         for i = 1:3
             if FacetsTest[i] == 0
                 new_ind = MVector(ind)  # bit array carried over from function input
