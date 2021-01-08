@@ -34,19 +34,27 @@ are set to zero for non-active simplex points.
 function signed_volume(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVector{M,P}, nvrtx::P) where {M,N,T,P}
     # Calculate weights and mininum active support set
     if nvrtx == 4
-        weights, wids, nvrtx = S3D(simplex, weights, wids, nvrtx)
+        # weights, wids, nvrtx = S3D(simplex, weights, wids, nvrtx)
+        S3D(simplex, weights, wids, nvrtx)
         # println("S3D: ", nvrtx, weights)
-        return weights, wids, nvrtx
+        # return weights, wids, nvrtx
+        return
     elseif nvrtx == 3
-        weights, wids, nvrtx = S2D(simplex, weights, wids, nvrtx)
+        # weights, wids, nvrtx = S2D(simplex, weights, wids, nvrtx)
+        S2D(simplex, weights, wids, nvrtx)
         # println("S2D: ", nvrtx, weights)
-        return weights, wids, nvrtx
+        # return weights, wids, nvrtx
+        return
     elseif nvrtx == 2
-        weights, wids, nvrtx = S1D(simplex, weights, wids, nvrtx)
+        # weights, wids, nvrtx = S1D(simplex, weights, wids, nvrtx)
+        S1D(simplex, weights, wids, nvrtx)
         # println("S1D: ", nvrtx, weights)
-        return weights, wids, nvrtx
+        # return weights, wids, nvrtx
+        return
     elseif nvrtx == 1
-        return weights, wids, nvrtx
+        weights[wids[1]] = 1        
+        # return weights, wids, nvrtx
+        return
     end
 end
 
@@ -70,7 +78,8 @@ function S3D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVec
     # Calculate minimum support set and associated weights
     if FacetsTest[1] == FacetsTest[2] == FacetsTest[3] == FacetsTest[4] == true
         weights[s1], weights[s2], weights[s3], weights[s4] = B[1]/detM, B[2]/detM, B[3]/detM, B[4]/detM
-        return weights, wids, 4
+        nvrtx = 4
+        # return weights, wids, 4
     else
         d_min = Inf
         best_weights, best_wids, best_nvrtx = MVector{4,T}(zeros(4,1)), MVector{4,P}(zeros(4,1)), Int(0)
@@ -97,7 +106,8 @@ function S3D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVec
                 end
             end
         end
-        return best_weights, best_wids, best_nvrtx
+        # return best_weights, best_wids, best_nvrtx
+        weights, wids, nvrtx = best_weights, best_wids, best_nvrtx
     end
 end
 
@@ -136,7 +146,8 @@ function S2D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVec
     if FacetsTest[1] == FacetsTest[2] == FacetsTest[3] == true
         weights[s1], weights[s2], weights[s3] = B[1]/nu_max, B[2]/nu_max, B[3]/nu_max
         weights[s4] = 0
-        return weights, wids, 3
+        nvrtx = 3
+        # return weights, wids, 3
     else
         d_min = Inf
         best_weights, best_wids, best_nvrtx = MVector{4,T}(zeros(4,1)), MVector{4,P}(zeros(4,1)), Int(0)
@@ -161,7 +172,8 @@ function S2D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVec
                 end
             end
         end
-        return best_weights, best_wids, best_nvrtx
+        # return best_weights, best_wids, best_nvrtx
+        weights, wids, nvrtx = best_weights, best_wids, best_nvrtx
     end
 end
 """
@@ -186,18 +198,21 @@ function S1D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVec
     if FacetsTest[1] == FacetsTest[2] == true
         weights[s1], weights[s2] = B[2]/nu_max, B[1]/nu_max
         weights[s3], weights[s4] = 0, 0
-        return weights, wids, 2
+        # return weights, wids, 2
+        nvrtx = 2
     else
         # Select vertex A or B based on distance from origin
         if dot(a, a) < dot(b, b)
             weights .= 0
             weights[s1] = 1
-            return weights, wids, 1
+            # return weights, wids, 1
+            nvrtx = 1
         else
             weights .= 0
             weights[s2] = 1
             wids[1], wids[2] = s2, s1
-            return weights, wids, 1
+            # return weights, wids, 1
+            nvrtx = 1
         end
     end
 end

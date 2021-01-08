@@ -213,8 +213,8 @@ function gjk!(cache::CollisionCache,
         end
 
         # Calculate new weights and support set W
-        weights, wids, nvrtx = signed_volume(simplex, weights, wids, nvrtx)
-        println("wids: ", wids)
+        signed_volume(simplex, weights, wids, nvrtx)
+        # println("wids: ", wids)
 
         # Secondary termination conditions
         best_point = linear_combination(weights, simplex)
