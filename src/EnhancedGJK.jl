@@ -14,6 +14,7 @@ using Statistics: mean
 export CollisionCache,
        gjk!,  # signed volume method
        gjk,  # signed volume method
+       body_simplex,  # return simplex points on body 
        gjk_original,  # johnson method
        gjk_original!, # johnson method
        GJKResult,

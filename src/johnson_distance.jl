@@ -19,7 +19,7 @@ function johnson_subsets(simplex_length::Integer)
 end
 
 """
-    weights, wids = signed_volume(simplex, weights, wids, nvrtx)
+    weights, wids, nvrtx = signed_volume(simplex, weights, wids, nvrtx)
 
 This function implements the Signed Volume distance sub-algorithm from
 Montanari, Petrinijc: Improving the GJK Algorithm for faster and more
@@ -34,13 +34,16 @@ are set to zero for non-active simplex points.
 function signed_volume(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVector{M,P}, nvrtx::P) where {M,N,T,P}
     # Calculate weights and mininum active support set
     if nvrtx == 4
-        S3D(simplex, weights, wids, nvrtx)
+        weights, wids, nvrtx = S3D(simplex, weights, wids, nvrtx)
+        # println("S3D: ", nvrtx, weights)
         return weights, wids, nvrtx
     elseif nvrtx == 3
-        S2D(simplex, weights, wids, nvrtx)
+        weights, wids, nvrtx = S2D(simplex, weights, wids, nvrtx)
+        # println("S2D: ", nvrtx, weights)
         return weights, wids, nvrtx
     elseif nvrtx == 2
-        S1D(simplex, weights, wids, nvrtx)
+        weights, wids, nvrtx = S1D(simplex, weights, wids, nvrtx)
+        # println("S1D: ", nvrtx, weights)
         return weights, wids, nvrtx
     elseif nvrtx == 1
         return weights, wids, nvrtx
@@ -60,18 +63,17 @@ function S3D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVec
     B2 = a[1]*c[2]*d[3] - a[1]*c[3]*d[2] - a[2]*c[1]*d[3] + a[2]*c[3]*d[1] + a[3]*c[1]*d[2] - a[3]*c[2]*d[1]
     B3 = -1*(a[1]*b[2]*d[3] - a[1]*b[3]*d[2] - a[2]*b[1]*d[3] + a[2]*b[3]*d[1] + a[3]*b[1]*d[2] - a[3]*b[2]*d[1])
     B4 = a[1]*b[2]*c[3] - a[1]*b[3]*c[2] - a[2]*b[1]*c[3] + a[2]*b[3]*c[1] + a[3]*b[1]*c[2] - a[3]*b[2]*c[1]
-    B = MVector{4,T}(B1, B2, B3, B4)
+    B = SVector{4,T}(B1, B2, B3, B4)
     detM = sum(B)
     FacetsTest = CompareSigns.(detM, B)
 
     # Calculate minimum support set and associated weights
-    if FacetsTest .== true
-        weights = B ./ detM
-        nvrtx = 4
-        return weights, wids, nvrtx
+    if FacetsTest[1] == FacetsTest[2] == FacetsTest[3] == FacetsTest[4] == true
+        weights[s1], weights[s2], weights[s3], weights[s4] = B[1]/detM, B[2]/detM, B[3]/detM, B[4]/detM
+        return weights, wids, 4
     else
         d_min = Inf
-        best_weights, best_wids = MVector{4,T}(zeros(4,1)), MVector{4,P}(zeros(4,1))
+        best_weights, best_wids, best_nvrtx = MVector{4,T}(zeros(4,1)), MVector{4,P}(zeros(4,1)), Int(0)
         for i = 1:4
             if FacetsTest[i] == false
                 nvrtx = 3
@@ -81,18 +83,21 @@ function S3D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVec
                     wids[1], wids[2], wids[3], wids[4] = s1, s3, s4, s2
                 elseif i == 3
                     wids[1], wids[2], wids[3], wids[4] = s1, s2, s4, s3
+                elseif i == 4
+                    wids[1], wids[2], wids[3], wids[4] = s1, s2, s3, s4
                 end
-                S2D!(simplex, weights, wids, nvrtx)  # exclude index i
+                S2D(simplex, weights, wids, nvrtx)  # exclude index i
                 v = linear_combination(weights, simplex)
                 d = dot(v, v)
                 if d < d_min
                     best_weights = weights
                     d_min = d
                     best_wids = wids
+                    best_nvrtx = nvrtx
                 end
             end
         end
-        weights, wids, nvrtx = best_weights, best_wids, nvrtx  # get best values
+        return best_weights, best_wids, best_nvrtx
     end
 end
 
@@ -100,16 +105,16 @@ end
 S2D function for determining minimum active support set for plane (triangle) and associated weights.
 Modification to the original algorithm by rotating the plane to a flat orientation.
 """
-function S2D!(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVector{M,P}, nvrtx::P) where {M,N,T,P}
+function S2D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVector{M,P}, nvrtx::P) where {M,N,T,P}
     # Unpack indices
-    s1, s2, s3 = wids[1:3]
+    s1, s2, s3, s4 = wids
 
     # Setup normals and origin projection
-    a, b, c = s1, s2, s3
+    a, b, c = simplex[s1], simplex[s2], simplex[s3]
     s21 = b - a
     s31 = c - a
-    n = LinearAlgebra.cross(s21, s31)
-    p0 = (dot(a, n))*n / dot(n, n)
+    n = cross(s21, s31)
+    p = (dot(a, n))*n / dot(n, n)
 
     # Method using DCM rotation matrix
     t1_hat = s21 / norm(s21)
@@ -117,129 +122,82 @@ function S2D!(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVe
     t2_hat = cross(n_hat, t1_hat)
 
     R = SMatrix{3,3,T}(t1_hat[1], t1_hat[2], t1_hat[3], t2_hat[1], t2_hat[2], t2_hat[3], n_hat[1], n_hat[2], n_hat[3])  # rotate from plane to N
-    a = DCM' * a
-    b = DCM' * b
-    c = DCM' * c
-    p0 = DCM' * p0
+    a, b, c, p = R'*a, R'*b, R'*c, R'*p
     nu_max = a[1]*b[2] - a[2]*b[1] - a[1]*c[2] + a[2]*c[1] + b[1]*c[2] - b[2]*c[1]  # signed area of triangle
 
-    # Discard the j-th coordinate to compare orientations along the plane tangent directions
-    # a_proj = SVector{2,T}(a[1:end .!= 3])
-    # b_proj = SVector{2,T}(b[1:end .!= 3])
-    # c_proj = SVector{2,T}(c[1:end .!= 3])
-    # p_proj = p0[1:end .!= 3]
-
     # Compute signed determinants
-    # B = MVector{3,T}(0, 0, 0)
-    # s_mat = SMatrix{3,3,T}(p_proj[1], p_proj[2], 1, b_proj[1], b_proj[2], 1, c_proj[1], c_proj[2], 1)  # determinant of this matrix
-    # B1 = b_proj[1]*c_proj[2] - b_proj[2]*c_proj[1] - b_proj[1]*p_proj[2] + b_proj[2]*p_proj[1] + c_proj[1]*p_proj[2] - c_proj[2]*p_proj[1]
     B1 = b[1]*c[2] - b[2]*c[1] - b[1]*p[2] + b[2]*p[1] + c[1]*p[2] - c[2]*p[1]
-
-    # s_mat = SMatrix{3,3,T}(a_proj[1], a_proj[2], 1, p_proj[1], p_proj[2], 1, c_proj[1], c_proj[2], 1)  # determinant of this matrix
-    # B2 = a_proj[2]*c_proj[1] - a_proj[1]*c_proj[2] + a_proj[1]*p_proj[2] - a_proj[2]*p_proj[1] - c_proj[1]*p_proj[2] + c_proj[2]*p_proj[1]
     B2 = a[2]*c[1] - a[1]*c[2] + a[1]*p[2] - a[2]*p[1] - c[1]*p[2] + c[2]*p[1]
-
-    # s_mat = SMatrix{3,3,T}(a_proj[1], a_proj[2], 1, b_proj[1], b_proj[2], 1, p_proj[1], p_proj[2], 1)  # determinant of this matrix
-    # B3 = a_proj[1]*b_proj[2] - a_proj[2]*b_proj[1] - a_proj[1]*p_proj[2] + a_proj[2]*p_proj[1] + b_proj[1]*p_proj[2] - b_proj[2]*p_proj[1]
     B3 = a[1]*b[2] - a[2]*b[1] - a[1]*p[2] + a[2]*p[1] + b[1]*p[2] - b[2]*p[1]
-
-    B = MVector{3,T}(B1, B2, B3)
+    B = SVector{3,T}(B1, B2, B3)
     FacetsTest = CompareSigns.(nu_max, B)
 
-    # FacetsTest = [0, 0, 0]
-    # for i = 1:3
-        # FacetsTest[i] = CompareSigns(nu_max, B[i])
-    # end
-
     # Calculate minimum support set and associated weights
-    if FacetsTest .== true
-        nvrtx = 3
-        weights[s1], weights[s2], weights[s3] = B ./ nu_max
+    if FacetsTest[1] == FacetsTest[2] == FacetsTest[3] == true
+        weights[s1], weights[s2], weights[s3] = B[1]/nu_max, B[2]/nu_max, B[3]/nu_max
         weights[s4] = 0
+        return weights, wids, 3
     else
-        # print("S2D Condition 2", "\n")
-        d = 1e5
+        d_min = Inf
+        best_weights, best_wids, best_nvrtx = MVector{4,T}(zeros(4,1)), MVector{4,P}(zeros(4,1)), Int(0)
         for i = 1:3
-            if FacetsTest[i] == 0
-                new_ind = MVector(ind)  # bit array carried over from function input
-                new_ind[actual_ind[i]] = 0  # remove the actual i-th coordinate
-                lam_new, w_new = S1D(simplex, new_ind)
-                v_new = linear_combination(lam_new, simplex)
-                d_new = LinearAlgebra.dot(v_new, v_new)
-                if d_new < d
-                    lam = lam_new
-                    d = d_new
-                    w_ind = w_new
+            if FacetsTest[i] == false
+                nvrtx = 2
+                if i == 1
+                    wids[1], wids[2], wids[3] = s2, s3, s1
+                elseif i == 2
+                    wids[1], wids[2], wids[3] = s1, s3, s2
+                elseif i == 3
+                    wids[1], wids[2], wids[3] = s1, s2, s3
+                end
+                S1D(simplex, weights, wids, nvrtx)
+                v = linear_combination(weights, simplex)
+                d = dot(v, v)
+                if d < d_min
+                    best_weights = weights
+                    d_min = d
+                    best_wids = wids
+                    best_nvrtx = nvrtx
                 end
             end
         end
-        return lam, w_ind
+        return best_weights, best_wids, best_nvrtx
     end
 end
 """
 S1D function for determining minimum active support set for line and associated weights.
 Modification to the original algorithm with the calculation of the weights.
 """
-function S1D(simplex::SVector{M, SVector{N, T}}, ind::MVector{M,P}) where {M,N,T,P}
+function S1D(simplex::SVector{M,SVector{N,T}}, weights::MVector{M,T}, wids::MVector{M,P}, nvrtx::P) where {M,N,T,P}
     # Unpack with indices
-    actual_ind = MVector{2,P}(0, 0)  # stores actual indices for the vertices/weights
-    s = []  # stores simplices used in the projection
-    cnt = 1
-    for i = 1:4
-        if ind[i] == 1
-            push!(s, simplex[i])
-            actual_ind[cnt] = i
-            cnt += 1
-        end
-    end
+    s1, s2, s3, s4 = wids
 
     # Project origin onto line segment AB
-    a, b = s[1], s[2]
+    a, b = simplex[s1], simplex[s2]
     t = b - a
-    pt = b + (LinearAlgebra.dot(b, t)/LinearAlgebra.dot(t, t)) * (-t)
+    pt = b + (dot(b, t)/dot(t, t)) * (-t)
 
     # Determine safest projection axis
-    nu_max, I_ind = 0, 1
-    for i = 1:3
-        nu = t[i]
-        if abs(nu) > abs(nu_max)
-            nu_max = nu
-            I_ind = i
-        end
-    end
-
-    a_proj, b_proj, pt_proj = a[I_ind], b[I_ind], pt[I_ind]
-    B = MVector{2,T}(0, 0)
-    B[1] = pt_proj - a_proj
-    B[2] = b_proj - pt_proj
-
-    FacetsTest = [0, 0]
-    FacetsTest[1] = CompareSigns(nu_max, B[1])
-    FacetsTest[2] = CompareSigns(nu_max, B[2])
+    nu_max, ind = findmax(abs.(t))
+    B = SVector{2,T}(pt[ind] - a[ind], b[ind] - pt[ind])
+    FacetsTest = CompareSigns.(nu_max, B)
 
     # Calculate minimum support set and associated weights
-    lam = MVector{4,T}(0, 0, 0, 0)
-    w_ind = MVector{4,P}(0, 0, 0, 0)
-    if (FacetsTest[1] == 1 && FacetsTest[2] == 1)
-        # Origin is between A and B
-        # print("S1D Condition 1", "\n")
-        lam[actual_ind[1]] = B[2] / nu_max
-        lam[actual_ind[2]] = B[1] / nu_max
-        w_ind[actual_ind[1]] = 1
-        w_ind[actual_ind[2]] = 1
-        return lam, w_ind
+    if FacetsTest[1] == FacetsTest[2] == true
+        weights[s1], weights[s2] = B[2]/nu_max, B[1]/nu_max
+        weights[s3], weights[s4] = 0, 0
+        return weights, wids, 2
     else
         # Select vertex A or B based on distance from origin
-        if LinearAlgebra.dot(a, a) < LinearAlgebra.dot(b, b)
-            # print("S1D Condition 2", "\n")
-            lam[actual_ind[1]] = 1
-            w_ind[actual_ind[1]] = 1
-            return lam, w_ind
+        if dot(a, a) < dot(b, b)
+            weights .= 0
+            weights[s1] = 1
+            return weights, wids, 1
         else
-            # print("S1D Condition 3", "\n")
-            lam[actual_ind[2]] = 1
-            w_ind[actual_ind[2]] = 1
-            return lam, w_ind
+            weights .= 0
+            weights[s2] = 1
+            wids[1], wids[2] = s2, s1
+            return weights, wids, 1
         end
     end
 end
@@ -248,7 +206,11 @@ end
 Helper function for sign comparison used in orientation determination.
 """
 function CompareSigns(a::T, b::T) where {T}
-    return (a>0) && (b>0)
+    if (a>0) && (b>0) || (a<0) && (b<0)
+        return true
+    else
+        return false
+    end
 end
 
 """
@@ -324,4 +286,44 @@ projection_weights_reference()
         return deltas[$num_subsets] ./ sum(deltas[$num_subsets])
     end)
     return expr
+end
+
+function projection_weights_reference(simplex::SVector{M, SVector{N, T}}) where {M,N,T}
+    num_subsets = 2^M - 1
+    complements = falses(M, num_subsets)
+    subsets = falses(M, num_subsets)
+    for i in 1:num_subsets
+        for j in 1:M
+            subsets[j, i] = (i >> (j - 1)) & 1
+            complements[j, i] = !subsets[j, i]
+        end
+    end
+
+    deltas = zeros(MMatrix{M, num_subsets, T})
+    viable = ones(MVector{num_subsets, Bool})
+
+    for i in 1:M
+        deltas[i, 2^(i - 1)] = 1
+    end
+
+    for s in 1:(num_subsets - 1)
+        k = first((1:M)[subsets[:,s]])
+        for j in (1:M)[complements[:,s]]
+            s2 = s + (1 << (j - 1))
+            delta_j_s2 = 0
+            for i in (1:M)[subsets[:,s]]
+                delta_j_s2 += deltas[i, s] * (dot(simplex[i], simplex[k]) - dot(simplex[i], simplex[j]))
+            end
+            if delta_j_s2 > 0
+                viable[s] = false
+            elseif delta_j_s2 < 0
+                viable[s2] = false
+            end
+            deltas[j, s2] = delta_j_s2
+        end
+        if viable[s]
+            return deltas[:,s] ./ sum(deltas[:,s])
+        end
+    end
+    return deltas[:,end] ./ sum(deltas[:,end])
 end
