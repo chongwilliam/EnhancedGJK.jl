@@ -14,10 +14,11 @@ using Statistics: mean
 export CollisionCache,
        gjk!,  # signed volume method
        gjk,  # signed volume method
-       body_simplex,  # return simplex points on body 
+       body_simplex,  # return simplex points on body
        gjk_original,  # johnson method
        gjk_original!, # johnson method
        GJKResult,
+       GJKParams, # added
        NeighborMesh,
        ReferenceDistance,
        closest_point_in_world,
@@ -30,11 +31,12 @@ export CollisionCache,
 
 include("tagged_points.jl")
 include("simplices.jl")
-include("johnson_distance.jl")
+# include("johnson_distance.jl")
 include("neighbor_mesh.jl")
 include("traits.jl")
 include("gjk.jl")
 include("reference_distance.jl")
+include("johnson_distance.jl")
 include("contact_normal.jl")
 
 end # module

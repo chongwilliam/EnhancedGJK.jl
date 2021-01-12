@@ -34,3 +34,14 @@ end
 function any_inside(point::gt.Point)
     Tagged(SVector(point))
 end
+
+""" Adding mutable struct here before including johnson.jl """
+mutable struct GJKParams
+    wids::SVector{4, Int}
+    prev_wids::SVector{4, Int}
+    nvrtx::Int
+    ordered_weights::MVector{4, Float64}
+    # not including weights
+    # inner constructor
+    GJKParams() = new(SVector{4,Int}(1,2,3,4), SVector{4,Int}(1,2,3,4), 0, MVector{4,Float64}(1,0,0,0))
+end

@@ -11,28 +11,50 @@ M is number of points in simplex, and SVector{N,T} is size 3 and type Float64.
 In the main algorithm, M is always fully populated (size = 4), and the weights
 are set to zero for non-active simplex points. wids tracks the top nvrtx active vertices.
 """
-function signed_volume(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}, nvrtx::P) where {M,N,T,P}
+# function signed_volume(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}, nvrtx::P) where {M,N,T,P}
+function signed_volume(simplex::SVector{M,SVector{N,T}}, params::GJKParams) where {M,N,T}
+
+    # Pre-allocate ordered weights array
+    # ordered_weights = zeros(4)
+
     # Calculate weights and mininum active support set
-    if nvrtx == 4
-        weights, wids, nvrtx = S3D(simplex, wids)
-        return weights, wids, nvrtx
-    elseif nvrtx == 3
-        weights, wids, nvrtx = S2D(simplex, wids)
-        return weights, wids, nvrtx
-    elseif nvrtx == 2
-        weights, wids, nvrtx = S1D(simplex, wids)
-        return weights, wids, nvrtx
-    elseif nvrtx == 1
-        weights = SVector{M,T}(1, 0, 0, 0)
-        weights = order_weights(weights, wids)
-        return weights, wids, nvrtx
+    # if nvrtx == 4
+    #     weights, wids, nvrtx = S3D(simplex, wids, ordered_weights)
+    #     return weights, wids, nvrtx
+    # elseif nvrtx == 3
+    #     weights, wids, nvrtx = S2D(simplex, wids, ordered_weights)
+    #     return weights, wids, nvrtx
+    # elseif nvrtx == 2
+    #     weights, wids, nvrtx = S1D(simplex, wids, ordered_weights)
+    #     return weights, wids, nvrtx
+    # elseif nvrtx == 1
+    #     weights = SVector{M,T}(1, 0, 0, 0)
+    #     weights = order_weights(ordered_weights, weights, wids)
+    #     return weights, wids, nvrtx
+    # end
+
+    if params.nvrtx == 4
+        weights = S3D(simplex, params)
+        return weights
+    elseif params.nvrtx == 3
+        weights = S2D(simplex, params)
+        return weights
+    elseif params.nvrtx == 2
+        weights = S1D(simplex, params)
+        return weights
+    elseif params.nvrtx == 1
+        # weights = SVector{M,T}(1, 0, 0, 0)
+        weights = order_weights(SVector{M,T}(1, 0, 0, 0), params)
+        return weights
     end
 end
 
 """
 S3D function for determining minimum active support set for tetrahedron and associated weights.
 """
-function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
+# function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}, ordered_weights::Array{T,1}) where {M,N,T,P}
+function S3D(simplex::SVector{M,SVector{N,T}}, params::GJKParams) where {M,N,T}
+
     # println("S3D")
 
     # Unpack indices
@@ -81,29 +103,39 @@ function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     # facets_test = compare_signs.(detM, C)
 
     # Calculate minimum support set and associated weights
-    if facets_test[1] == facets_test[2] == facets_test[3] == facets_test[4] == true
+    if facets_test[1] == facets_test[2] == facets_test[3] == facets_test[4]
         weights = C / detM
-        new_wids = SVector{4,Int}(1, 2, 3, 4)
-        return weights, new_wids, 4
+        # new_wids = SVector{4,Int}(1, 2, 3, 4)
+        params.wids = SVector{4,Int}(1, 2, 3, 4)
+        # return weights, new_wids, 4
+        return weights
     else
         d_min = Inf
-        best_weights, best_wids, best_nvrtx = 0, 0, 0
+        best_weights, best_wids, best_nvrtx = undef, undef, undef
+        # tmp_weights, tmp_wids, tmp_nvrtx = 0, 0, 0
+        tmp_weights = undef
         @inbounds for i = 1:4
             if facets_test[i] == false  # wrt s ordering
                 if i == 1
-                    new_wids = SVector{4,Int}(2, 3, 4, 1)
+                    # new_wids = SVector{4,Int}(2, 3, 4, 1)
+                    params.wids = SVector{4,Int}(2, 3, 4, 1)
                 elseif i == 2
-                    new_wids = SVector{4,Int}(1, 3, 4, 2)
+                    # new_wids = SVector{4,Int}(1, 3, 4, 2)
+                    params.wids = SVector{4,Int}(1, 3, 4, 2)
                 elseif i == 3
-                    new_wids = SVector{4,Int}(1, 2, 4, 3)
+                    # new_wids = SVector{4,Int}(1, 2, 4, 3)
+                    params.wids = SVector{4,Int}(1, 2, 4, 3)
                 elseif i == 4
-                    new_wids = SVector{4,Int}(1, 2, 3, 4)
+                    # new_wids = SVector{4,Int}(1, 2, 3, 4)
+                    params.wids = SVector{4,Int}(1, 2, 3, 4)
                 end
-                tmp_weights, tmp_wids, tmp_nvrtx = S2D(simplex, new_wids)  # weights are in order
+                # tmp_weights, tmp_wids, tmp_nvrtx = S2D(simplex, new_wids, ordered_weights)
+                tmp_weights = S2D(simplex, params)
                 v = linear_combination(tmp_weights, simplex)
                 v_len = dot(v, v)
                 if v_len < d_min
-                    best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, tmp_wids, tmp_nvrtx
+                    # best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, tmp_wids, tmp_nvrtx
+                    best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, params.wids, params.nvrtx
                 end
             end
         end
@@ -115,15 +147,16 @@ end
 S2D function for determining minimum active support set for plane (triangle) and associated weights.
 Modification to the original algorithm by rotating the plane to a flat orientation.
 """
-function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
+# function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}, ordered_weights::Array{T,1}) where {M,N,T,P}
+function S2D(simplex::SVector{M,SVector{N,T}}, params::GJKParams) where {M,N,T}
     # println("S2D")
     # println("wids: ", wids)
 
     # Unpack indices
-    _wids = view(wids,1:4)
+    _wids = view(params.wids,1:4)
 
     # Unpack simplex in wids order
-    _s = view(simplex[wids],1:3)
+    _s = view(simplex[params.wids],1:3)
 
     # Setup normals and origin projection
     AB = _s[2] - _s[1]
@@ -183,25 +216,34 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     # Calculate minimum support set and associated weights
     if facets_test[1] == facets_test[2] == facets_test[3]
         weights = C / nu_max
-        weights = order_weights(weights, wids)
-        return weights, wids, 3
+        # weights = order_weights(ordered_weights, weights, wids)
+        weights = order_weights(weights, params)
+        # return weights, wids, 3
+        return weights
     else
         d_min = Inf
-        best_weights, best_wids, best_nvrtx = 0, 0, 0
+        best_weights, best_wids, best_nvrtx = undef, undef, undef
+        # tmp_weights, tmp_wids, tmp_nvrtx = 0, 0, 0
+        tmp_weights = undef
         @inbounds for i = 1:3
             if facets_test[i] == false
                 if i == 1
-                    new_wids = SVector{4,P}(_wids[2], _wids[3], _wids[4], _wids[1])
+                    # new_wids = SVector{4,P}(_wids[2], _wids[3], _wids[4], _wids[1])
+                    params.wids = SVector{4,P}(_wids[2], _wids[3], _wids[4], _wids[1])
                 elseif i == 2
-                    new_wids = SVector{4,P}(_wids[1], _wids[3], _wids[4], _wids[2])
+                    # new_wids = SVector{4,P}(_wids[1], _wids[3], _wids[4], _wids[2])
+                    params.wids = SVector{4,P}(_wids[1], _wids[3], _wids[4], _wids[2])
                 elseif i == 3
-                    new_wids = SVector{4,P}(_wids[1], _wids[2], _wids[4], _wids[3])
+                    # new_wids = SVector{4,P}(_wids[1], _wids[2], _wids[4], _wids[3])
+                    params.wids = SVector{4,P}(_wids[1], _wids[2], _wids[4], _wids[3])
                 end
-                tmp_weights, tmp_wids, tmp_nvrtx = S1D(simplex, new_wids)  # weights are in order
+                # tmp_weights, tmp_wids, tmp_nvrtx = S1D(simplex, new_wids, ordered_weights)
+                tmp_weights = S1D(simplex, params)
                 v = linear_combination(tmp_weights, simplex)
                 v_len = dot(v, v)
                 if v_len < d_min
-                    best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, tmp_wids, tmp_nvrtx
+                    # best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, tmp_wids, tmp_nvrtx
+                    best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, params._wids, params._nvrtx
                 end
             end
         end
@@ -213,31 +255,39 @@ end
 S1D function for determining minimum active support set for line and associated weights.
 Modification to the original algorithm with the calculation of the weights.
 """
-function S1D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
+# function S1D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}, ordered_weights::Array{T,1}) where {M,N,T,P}
+function S1D(simplex::SVector{M,SVector{N,T}}, params::GJKParams) where {M,N,T}
+
     # println("S1D")
 
     # Unpack indices
-    _wids = view(wids,1:4)
+    _wids = view(params.wids,1:4)
 
     # Unpack simplex in wids order
-    _s = view(simplex[wids],1:2)
+    _s = view(simplex[params.wids],1:2)
 
     ### Version 3 ###
     AB = _s[2] - _s[1]
     t = - dot(_s[1], AB) / dot(AB, AB)  # s(t) = (1-t)*s1 + t*s2
 
     if t < 0
-        weights = SVector{4,T}(1, 0, 0, 0)
-        weights = order_weights(weights, wids)
-        return weights, wids, 1
+        # weights = SVector{4,T}(1, 0, 0, 0)
+        # weights = order_weights(ordered_weights, weights, wids)
+        # return weights, wids, 1
+        weights = order_weights(SVector{4,T}(1, 0, 0, 0), params)
+        return weights
     elseif t < 1
-        weights = SVector{4,T}(1-t, t, 0, 0)
-        weights = order_weights(weights, wids)
-        return weights, wids, 2
+        # weights = SVector{4,T}(1-t, t, 0, 0)
+        # weights = order_weights(ordered_weights, weights, wids)
+        # return weights, wids, 2
+        weights = order_weights(SVector{4,T}(1-t, t, 0, 0), params)
+        return weights
     else
-        weights = SVector{4,T}(0, 1, 0, 0)
-        weights = order_weights(weights, wids)
-        return weights, wids, 1
+        # weights = SVector{4,T}(0, 1, 0, 0)
+        # weights = order_weights(ordered_weights, weights, wids)
+        # return weights, wids, 1
+        weights = order_weights(SVector{4,T}(0, 1, 0, 0), params)
+        return weights
     end
 end
 
@@ -255,10 +305,13 @@ end
 """
 Helper function to order weights based on wids.
 """
-function order_weights(weights::SVector{M,T}, wids::SVector{M,P}) where {M,T,P}
-    ordered_weights = MVector{M,T}(zeros(4))
-    ordered_weights[wids] = weights
-    return SVector(ordered_weights)
+# function order_weights(ordered_weights::Array{T,1}, weights::SVector{M,T}, wids::SVector{M,P}) where {M,T,P}
+#     ordered_weights[wids] = weights
+#     return SVector{M,T}(ordered_weights)
+# end
+
+function order_weights(weights::SVector{M,T}, params::GJKParams) where {M,T}
+    params.ordered_weights[params.wids] = weights
 end
 
 num_johnson_subsets(simplex_length::Integer) = 2^simplex_length - 1
