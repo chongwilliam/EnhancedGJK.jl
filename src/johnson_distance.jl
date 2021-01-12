@@ -1,23 +1,3 @@
-num_johnson_subsets(simplex_length::Integer) = 2^simplex_length - 1
-
-"""
-Compute all subsets of the points in the simplex in a reliable order. The
-order is arbitrary, but was chosen to match the implemenation in
-S. Cameron, “Enhancing GJK: computing mininum and penetration distances between
-convex polyhedra,”. Specifically, subset i contains point j iff the binary
-representation of i has a one at the jth bit.
-"""
-function johnson_subsets(simplex_length::Integer)
-    num_subsets = num_johnson_subsets(simplex_length)
-    subsets = falses(simplex_length, num_subsets)
-    for i in 1:num_subsets
-        for j in 1:simplex_length
-            subsets[j, i] = (i >> (j - 1)) & 1
-        end
-    end
-    subsets
-end
-
 """
     weights, wids, nvrtx = signed_volume(simplex, wids, nvrtx)
 
@@ -29,7 +9,7 @@ the next v_k vector.
 
 M is number of points in simplex, and SVector{N,T} is size 3 and type Float64.
 In the main algorithm, M is always fully populated (size = 4), and the weights
-are set to zero for non-active simplex points.
+are set to zero for non-active simplex points. wids tracks the top nvrtx active vertices.
 """
 function signed_volume(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}, nvrtx::P) where {M,N,T,P}
     # Calculate weights and mininum active support set
@@ -53,14 +33,14 @@ end
 S3D function for determining minimum active support set for tetrahedron and associated weights.
 """
 function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
-    println("S3D")
+    # println("S3D")
 
     # Unpack indices
     # _wids = view(wids,:)
 
     # Unpack simplex in wids order
     # _s = view(simplex[_wids],:)
-    _s = view(simplex,:)
+    _s = view(simplex,1:4)
 
     # Calculate signed determinants to compare tetrahedron orientations
     ### Version 1 ###
@@ -75,7 +55,7 @@ function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     # detM = det(M_mat)
     facets_test = compare_signs.(detM, C)
 
-    println("S3D C: ", C)
+    # println("S3D C: ", C)
 
     ### Version 2 ###
     # a1, a2, a3 = simplex[s[1]]
@@ -108,29 +88,22 @@ function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     else
         d_min = Inf
         best_weights, best_wids, best_nvrtx = 0, 0, 0
-        for i = 1:4
+        @inbounds for i = 1:4
             if facets_test[i] == false  # wrt s ordering
                 if i == 1
-                    # new_wids = SVector{4,P}(_wids[2],_wids[3],_wids[4],_wids[1])
                     new_wids = SVector{4,Int}(2, 3, 4, 1)
                 elseif i == 2
-                    # new_wids = SVector{4,P}(_wids[1],_wids[3],_wids[4],_wids[2])
                     new_wids = SVector{4,Int}(1, 3, 4, 2)
                 elseif i == 3
-                    # new_wids = SVector{4,P}(_wids[1],_wids[2],_wids[4],_wids[3])
                     new_wids = SVector{4,Int}(1, 2, 4, 3)
                 elseif i == 4
-                    # new_wids = SVector{4,P}(_wids[1],_wids[2],_wids[3],_wids[4])
                     new_wids = SVector{4,Int}(1, 2, 3, 4)
                 end
                 tmp_weights, tmp_wids, tmp_nvrtx = S2D(simplex, new_wids)  # weights are in order
                 v = linear_combination(tmp_weights, simplex)
                 v_len = dot(v, v)
                 if v_len < d_min
-                    best_weights = tmp_weights
-                    d_min = v_len
-                    best_wids = tmp_wids
-                    best_nvrtx = tmp_nvrtx
+                    best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, tmp_wids, tmp_nvrtx
                 end
             end
         end
@@ -143,8 +116,8 @@ S2D function for determining minimum active support set for plane (triangle) and
 Modification to the original algorithm by rotating the plane to a flat orientation.
 """
 function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
-    println("S2D")
-    println("wids: ", wids)
+    # println("S2D")
+    # println("wids: ", wids)
 
     # Unpack indices
     _wids = view(wids,1:4)
@@ -185,8 +158,8 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     C = SVector{4,T}(det(BCP), -det(ACP), det(ABP), 0)  # wrt s ordering
     facets_test = compare_signs.(nu_max, C)
 
-    println("S2D C: ", C)
-    println("S2D nu_max: ", nu_max)
+    # println("S2D C: ", C)
+    # println("S2D nu_max: ", nu_max)
 
     ### Version 1 ###
     # # Rotate vectors
@@ -207,58 +180,15 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     # C = SVector{4,T}(det(M_31), -det(M_32), det(M_33), 0)  # wrt s ordering
     # facets_test = compare_signs.(nu_max, C)
 
-    ### Version 2 ###
-    # a, b, c = simplex[s[1]], simplex[s[2]], simplex[s[3]]
-    # s21 = b - a
-    # s31 = c - a
-    # n = cross(s21, s31)
-    # p = (dot(a, n))*n / dot(n, n)
-    #
-    # # Method using DCM rotation matrix
-    # t1_hat = s21 / norm(s21)
-    # n_hat = n / norm(n)
-    # t2_hat = cross(n_hat, t1_hat)
-    #
-    # # R = SMatrix{3,3,T}(t1_hat[1], t1_hat[2], t1_hat[3], t2_hat[1], t2_hat[2], t2_hat[3], n_hat[1], n_hat[2], n_hat[3])  # rotate from plane to N
-    # R = SMatrix{3,3,T}(t1_hat[1], t2_hat[1], n_hat[1], t1_hat[2], t2_hat[2], n_hat[2], t1_hat[3], t2_hat[3], n_hat[3])  # rotate from N to plane
-    #
-    # ### Version 1 ###
-    # a1, a2, _ = R*a
-    # b1, b2, _ = R*b
-    # c1, c2, _ = R*c
-    # p1, p2, _ = R*p
-    #
-    # M_mat = SMatrix{3,3,T}(a1,a2,1,b1,b2,1,c1,c2,1)
-    # nu_max = det(M_mat)
-    # M_31 = SMatrix{3,3,T}(b1,b2,1,c1,c2,1,p1,p2,1)
-    # M_32 = SMatrix{3,3,T}(a1,a2,1,c1,c2,1,p1,p2,1)
-    # M_33 = SMatrix{3,3,T}(a1,a2,1,b1,b2,1,p1,p2,1)
-    # C = SVector{4,T}(det(M_31), -det(M_32), det(M_33), 0)  # wrt s ordering
-    # facets_test = compare_signs.(nu_max, C)
-
-    ### Version 3 ###
-    # a, b, c, p = R*a, R*b, R*c, R*p
-    # nu_max = a[1]*b[2] - a[2]*b[1] - a[1]*c[2] + a[2]*c[1] + b[1]*c[2] - b[2]*c[1]  # signed area of triangle
-    # B1 = b[1]*c[2] - b[2]*c[1] - b[1]*p[2] + b[2]*p[1] + c[1]*p[2] - c[2]*p[1]
-    # B2 = a[2]*c[1] - a[1]*c[2] + a[1]*p[2] - a[2]*p[1] - c[1]*p[2] + c[2]*p[1]
-    # B3 = a[1]*b[2] - a[2]*b[1] - a[1]*p[2] + a[2]*p[1] + b[1]*p[2] - b[2]*p[1]
-    # C = SVector{4,T}(B1, B2, B3, 0)
-    # facets_test = compare_signs.(nu_max, C)
-
     # Calculate minimum support set and associated weights
-    if facets_test[1] == facets_test[2] == facets_test[3] == true
+    if facets_test[1] == facets_test[2] == facets_test[3]
         weights = C / nu_max
-        println(weights)
-        println(wids)
-        println(weights[wids])
-        # new_wids = SVector{4,Int}(_wids[1], _wids[2], _wids[3], _wids[4])
-        # create mapping wids for weights
         weights = order_weights(weights, wids)
         return weights, wids, 3
     else
         d_min = Inf
         best_weights, best_wids, best_nvrtx = 0, 0, 0
-        for i = 1:3
+        @inbounds for i = 1:3
             if facets_test[i] == false
                 if i == 1
                     new_wids = SVector{4,P}(_wids[2], _wids[3], _wids[4], _wids[1])
@@ -268,13 +198,10 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
                     new_wids = SVector{4,P}(_wids[1], _wids[2], _wids[4], _wids[3])
                 end
                 tmp_weights, tmp_wids, tmp_nvrtx = S1D(simplex, new_wids)  # weights are in order
-                v = linear_combination(tmp_weights[tmp_wids], simplex)
+                v = linear_combination(tmp_weights, simplex)
                 v_len = dot(v, v)
                 if v_len < d_min
-                    best_weights = tmp_weights
-                    d_min = v_len
-                    best_wids = tmp_wids
-                    best_nvrtx = tmp_nvrtx
+                    best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, tmp_wids, tmp_nvrtx
                 end
             end
         end
@@ -287,7 +214,7 @@ S1D function for determining minimum active support set for line and associated 
 Modification to the original algorithm with the calculation of the weights.
 """
 function S1D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
-    println("S1D")
+    # println("S1D")
 
     # Unpack indices
     _wids = view(wids,1:4)
@@ -297,86 +224,21 @@ function S1D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
 
     ### Version 3 ###
     AB = _s[2] - _s[1]
-    # p = _s[1] + (dot(-_s[1], AB) / dot(AB, AB)) * AB
     t = - dot(_s[1], AB) / dot(AB, AB)  # s(t) = (1-t)*s1 + t*s2
-
-    println("t: ", t)
-
-    # Unpack indices
-    ### Version 3 ###
-    # AB = simplex[wids[2]] - simplex[wids[1]]
-    # t = -dot(simplex[wids[1]], AB) / dot(AB, AB)
 
     if t < 0
         weights = SVector{4,T}(1, 0, 0, 0)
-        # new_wids = SVector{4,Int}(_wids[1], _wids[2], _wids[3], _wids[4])
-        # return weights[new_wids], new_wids, 1
         weights = order_weights(weights, wids)
         return weights, wids, 1
     elseif t < 1
         weights = SVector{4,T}(1-t, t, 0, 0)
-        # new_wids = SVector{4,Int}(_wids[1], _wids[2], _wids[3], _wids[4])
-        # return weights[new_wids], new_wids, 2
         weights = order_weights(weights, wids)
         return weights, wids, 2
     else
         weights = SVector{4,T}(0, 1, 0, 0)
-        # new_wids = SVector{4,Int}(_wids[1], _wids[2], _wids[3], _wids[4])
-        # return weights[new_wids], new_wids, 1
         weights = order_weights(weights, wids)
         return weights, wids, 1
     end
-
-    ### Version 1 ###
-    # t = _s[2] - _s[1]
-    # p = _s[2] + (dot(_s[2], t) / dot(t, t)) * (-t)
-    #
-    # # determine projection axis
-    # _, ind = findmax(abs.(t))
-    # nu_max = t[ind]
-    # B = SVector{4,T}( (p-_s[1])[ind], (_s[2]-p)[ind], 0, 0 )
-    # # B = SVector{4,T}( (b-p)[ind], (p-a)[ind], 0, 0 )  # flipped
-    # facets_test = compare_signs.(nu_max, B)
-
-    ### Version 2 ###
-    # # Project origin onto line segment AB
-    # a, b = simplex[s[1]], simplex[s[2]]
-    # t = b - a
-    # p = b + (dot(b, t)/dot(t, t)) * (-t)
-    #
-    # # determine safest projection axis
-    # nu_max, ind = findmax(abs.(t))
-    # B = SVector{4,T}( (p-a)[ind], (b-p)[ind], 0, 0 )
-    # # B = SVector{4,T}( (b-p)[ind], (p-a)[ind], 0, 0 )  # flipped
-    # facets_test = compare_signs.(nu_max, B)
-
-    # # Calculate minimum support set and associated weights
-    # if facets_test[1] == facets_test[2] == true
-    #     # weights[s1], weights[s2] = B[2]/nu_max, B[1]/nu_max
-    #     # weights[s3], weights[s4] = 0, 0
-    #     # new_wids = SVector{4,P}(_wids[2],_wids[1],_wids[3],_wids[4])
-    #     new_wids = SVector{4,P}(_wids[2],_wids[1],_wids[4],_wids[3])
-    #     weights = B / nu_max
-    #     return weights[new_wids], new_wids, 2
-    # else
-    #     # Select vertex A or B based on distance from origin
-    #     if dot(_s[1], _s[1]) < dot(_s[2], _s[2])
-    #         weights = SVector{4,T}(1,0,0,0)
-    #         # weights .= 0
-    #         # weights[s1] = 1
-    #         # new_wids = SVector{4,P}(_wids[1],_wids[2],_wids[3],_wids[4])
-    #         new_wids = SVector{4,P}(_wids[1],_wids[4],_wids[3],_wids[2])
-    #         return weights[new_wids], new_wids, 1
-    #     else
-    #         # weights .= 0
-    #         # weights[s2] = 1
-    #         weights = SVector{4,T}(1,0,0,0)
-    #         # new_wids = SVector{4,P}(_wids[2],_wids[1],_wids[3],_wids[4])
-    #         new_wids = SVector{4,P}(_wids[2],_wids[4],_wids[3],_wids[1])
-    #         # wids[1], wids[2] = s2, s1
-    #         return weights[new_wids], new_wids, 1
-    #     end
-    # end
 end
 
 """
@@ -394,12 +256,29 @@ end
 Helper function to order weights based on wids.
 """
 function order_weights(weights::SVector{M,T}, wids::SVector{M,P}) where {M,T,P}
-    permutated_weights = zeros(4)
-    @inbounds for i = 1:4
-        permutated_weights[wids[i]] = weights[i]
+    ordered_weights = MVector{M,T}(zeros(4))
+    ordered_weights[wids] = weights
+    return SVector(ordered_weights)
+end
+
+num_johnson_subsets(simplex_length::Integer) = 2^simplex_length - 1
+
+"""
+Compute all subsets of the points in the simplex in a reliable order. The
+order is arbitrary, but was chosen to match the implemenation in
+S. Cameron, “Enhancing GJK: computing mininum and penetration distances between
+convex polyhedra,”. Specifically, subset i contains point j iff the binary
+representation of i has a one at the jth bit.
+"""
+function johnson_subsets(simplex_length::Integer)
+    num_subsets = num_johnson_subsets(simplex_length)
+    subsets = falses(simplex_length, num_subsets)
+    for i in 1:num_subsets
+        for j in 1:simplex_length
+            subsets[j, i] = (i >> (j - 1)) & 1
+        end
     end
-    ordered_weights = SVector{M,T}(permutated_weights)
-    return ordered_weights
+    subsets
 end
 
 """

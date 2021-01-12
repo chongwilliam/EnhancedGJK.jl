@@ -78,15 +78,20 @@ function transform_simplex_impl(N, cache, poseA, poseB)
 end
 
 # Note: it looks like this can be replaced with transpose(weights) * points in Julia 1.3 (before that, it's a lot slower)
-@generated function linear_combination(weights::StaticVector{N}, points::StaticVector{N}) where {N}
-    expr = :(weights[1] * points[1])
-    for i = 2 : N
-        expr = :($expr + weights[$i] * points[$i])
-    end
-    return quote
-        Base.@_inline_meta
-        $expr
-    end
+# @generated function linear_combination(weights::StaticVector{N}, points::StaticVector{N}) where {N}
+#     expr = :(weights[1] * points[1])
+#     for i = 2 : N
+#         expr = :($expr + weights[$i] * points[$i])
+#     end
+#     return quote
+#         Base.@_inline_meta
+#         $expr
+#     end
+# end
+
+# Updated for v1.5
+function linear_combination(weights::StaticVector{N}, points::StaticVector{N}) where {N}
+    return weights' * points
 end
 
 struct GJKResult{M, N, T}
@@ -127,7 +132,7 @@ end
 # mesh_simplex = body_simplex(cache, wids, nvrtx)
 
 closest_point_in_world(result::GJKResult) = linear_combination(result.simplex, result.weights)
-closest_point_in_body(result::GJKResult) = result.closest_point_in_body # just for symmetry with the world function
+closest_point_in_body(result::GJKResult) = result.closest_point_in_body
 separation_distance(result::GJKResult) = (@assert !result.in_collision; norm(closest_point_in_world(result)))
 simplex_penetration_distance(result::GJKResult) = penetration_distance(result.simplex)
 
@@ -146,12 +151,11 @@ function gjk!(cache::CollisionCache,
     simplex = transform_simplex(cache, poseA, poseB)
     iter = 1
 
-    # Initialize values
-    weights = SVector{4,Float64}(1,0,0,0)  # barycentric coordinates with active simplex
-    wids = SVector{4,Int}(1,2,3,4)  # track active simplex points returned from signed_volume (top nvrtx)
-    prev_wids = wids
+    # Initialize containers
+    weights = SVector{4,Float64}(1,0,0,0)
+    wids = SVector{4,Int}(1,2,3,4)  # track active simplex points returned from signed_volume (top nvrtx are active)
+    prev_wids = wids  # tracks repetition termination condition
     nvrtx = 0  # number of active vertices in simplex
-    # y_simplex = simplex  # cyclic y set buffer
     best_point = simplex[1]  # initialize to first vertex
 
     while true
@@ -182,8 +186,8 @@ function gjk!(cache::CollisionCache,
         improved_point = poseA(value(improved_vertex.a)) - poseB(value(improved_vertex.b))
         score = dot(improved_point, direction)  # best_point = v_k; improved_point = w_k
 
-        println("***")
-        println("improved point: ", improved_point)
+        # println("***")
+        # println("pre-update improved point: ", improved_point)
 
         # Primary termination conditions
         v_len = dot(best_point, best_point)
@@ -202,13 +206,13 @@ function gjk!(cache::CollisionCache,
         else
             # Add improved point to the simplex set
             nvrtx += 1
-            index_to_replace = wids[nvrtx]  # assumes this order in the sub-routine
+            index_to_replace = wids[nvrtx]
             cache.simplex_points[index_to_replace] = improved_vertex
             simplex = setindex(simplex, improved_point, index_to_replace)
             prev_wids = wids[1:nvrtx]
-            println("pre-update wids: ", wids)
-            println("pre-update vrtx: ", nvrtx)
-            println("pre-update previous wids: ", prev_wids)
+            # println("pre-update wids: ", wids)
+            # println("pre-update vrtx: ", nvrtx)
+            # println("pre-update previous wids: ", prev_wids)
         end
 
         # Calculate new weights and support set W
@@ -216,20 +220,25 @@ function gjk!(cache::CollisionCache,
         # min_weight, index_to_replace = findmin(weights)
 
         # Secondary termination conditions
-        best_point = linear_combination(weights, simplex)
-        w_set = simplex[wids[1:nvrtx]]
-        w_max = maximum(dot(w_set, w_set))
+        # best_point = linear_combination(weights, simplex)
+        # w_set = simplex[wids[1:nvrtx]]
+        # w_max = maximum(dot(w_set, w_set))
+        #
+        # if nvrtx == 4 || dot(best_point, best_point) <= eps_tol*w_max
+        #     closest_point_in_body = linear_combination(weights, cache.simplex_points)
+        #     return GJKResult(simplex, weights, true, closest_point_in_body, nvrtx, wids, iter, 4)
+        # end
 
-        if nvrtx == 4 || dot(best_point, best_point) <= eps_tol*w_max
+        best_point = linear_combination(weights, simplex)
+        if nvrtx == 4
             closest_point_in_body = linear_combination(weights, cache.simplex_points)
             return GJKResult(simplex, weights, true, closest_point_in_body, nvrtx, wids, iter, 4)
         end
 
-        println("post-update nvrtx: ", nvrtx)
-        println("post-update weights: ", weights)
-        println("post-update wids: ", wids)
+        # println("post-update nvrtx: ", nvrtx)
+        # println("post-update weights: ", weights)
+        # println("post-update wids: ", wids)
 
-        # Increment
         iter += 1
     end
 end
@@ -313,7 +322,7 @@ function gjk_original!(cache::CollisionCache,
             simplex = setindex(simplex, improved_point, index_to_replace)
             # simplex[index_to_replace] = improved_point
         end
-        println("improved point: ", improved_point)
+
         iter += 1
     end
 end

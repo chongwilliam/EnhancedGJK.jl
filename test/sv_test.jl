@@ -1,7 +1,6 @@
 using EnhancedGJK
 using BenchmarkTools
-using MeshIO  # v0.3.2
-using FileIO
+using MeshIO, FileIO  # v0.3.2
 using CoordinateTransformations, StaticArrays
 import GeometryTypes: HyperRectangle, HyperSphere, Vec, Point, HomogenousMesh
 using MeshCat, Colors
@@ -21,6 +20,8 @@ ref_result = gjk_original(c1, c2, poseA, poseB)
 
 @btime gjk(c1, c2, poseA, poseB)
 @btime gjk_original(c1, c2, poseA, poseB)
+
+@code_warntype gjk(c1, c2, poseA, poseB)
 
 println(result.termination, "\n", result.iterations)
 println(ref_result.closest_point_in_body, "\n", ref_result.iterations)
