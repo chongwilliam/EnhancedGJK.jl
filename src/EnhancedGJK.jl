@@ -10,13 +10,15 @@ using CoordinateTransformations: Transformation,
                                  IdentityTransformation
 using LinearAlgebra
 using Statistics: mean
+using Meshing
+# using GeometryBasics: Mesh, TriangleFace, GLTriangleFace, Point3f0
 
 export CollisionCache,
        gjk!,  # signed volume method
        gjk,  # signed volume method
-       body_simplex,  # return simplex points on body 
-       gjk_original,  # johnson method
+       body_simplex,  # return simplex points on body
        gjk_original!, # johnson method
+       gjk_original,  # johnson method
        GJKResult,
        NeighborMesh,
        ReferenceDistance,
@@ -25,8 +27,12 @@ export CollisionCache,
        separation_distance,
        simplex_penetration_distance,
        linear_combination,
-       normal,  # PCA method
-       normal_test  # PCA method unit test
+       construct_surface,
+       construct_centers,
+       eval_surface,
+       make_mesh,
+       make_geom,
+       make_mesh_dep
 
 include("tagged_points.jl")
 include("simplices.jl")
@@ -35,6 +41,6 @@ include("neighbor_mesh.jl")
 include("traits.jl")
 include("gjk.jl")
 include("reference_distance.jl")
-include("contact_normal.jl")
+include("surface.jl")
 
 end # module

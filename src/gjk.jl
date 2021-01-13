@@ -89,7 +89,7 @@ end
 #     end
 # end
 
-# Updated for v1.5
+# Updated for Julia 1.5
 function linear_combination(weights::StaticVector{N}, points::StaticVector{N}) where {N}
     return weights' * points
 end

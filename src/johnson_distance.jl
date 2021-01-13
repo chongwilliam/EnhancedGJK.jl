@@ -87,7 +87,8 @@ function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
         return weights, new_wids, 4
     else
         d_min = Inf
-        best_weights, best_wids, best_nvrtx = 0, 0, 0
+        best_weights, best_wids, best_nvrtx = undef, undef, undef
+        tmp_weights, tmp_wids, tmp_nvrtx = undef, undef, undef
         @inbounds for i = 1:4
             if facets_test[i] == false  # wrt s ordering
                 if i == 1
@@ -187,7 +188,8 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
         return weights, wids, 3
     else
         d_min = Inf
-        best_weights, best_wids, best_nvrtx = 0, 0, 0
+        best_weights, best_wids, best_nvrtx = undef, undef, undef
+        tmp_weights, tmp_wids, tmp_nvrtx = undef, undef, undef
         @inbounds for i = 1:3
             if facets_test[i] == false
                 if i == 1
@@ -256,7 +258,7 @@ end
 Helper function to order weights based on wids.
 """
 function order_weights(weights::SVector{M,T}, wids::SVector{M,P}) where {M,T,P}
-    ordered_weights = MVector{M,T}(zeros(4))
+    ordered_weights = MVector{M,T}(undef)
     ordered_weights[wids] = weights
     return SVector(ordered_weights)
 end

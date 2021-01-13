@@ -14,20 +14,18 @@ poseA = trans
 trans = Translation(SVector{3,Float64}(0,0,0))
 poseB = trans
 
-# GeometryBasics testing
+# Tests
 result = gjk(c1, c2, poseA, poseB)
 ref_result = gjk_original(c1, c2, poseA, poseB)
-
-@btime gjk(c1, c2, poseA, poseB)
-@btime gjk_original(c1, c2, poseA, poseB)
-
-@code_warntype gjk(c1, c2, poseA, poseB)
 
 println(result.termination, "\n", result.iterations)
 println(ref_result.closest_point_in_body, "\n", ref_result.iterations)
 
 println(separation_distance(result))
 println(separation_distance(ref_result))
+
+@btime gjk(c1, c2, poseA, poseB)
+@btime gjk_original(c1, c2, poseA, poseB)
 
 # Visualization
 vis = Visualizer()
