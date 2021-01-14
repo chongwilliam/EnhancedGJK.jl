@@ -38,6 +38,31 @@ function eval_surface(c::SVector{M,T}, centers::SVector{N, SVector{P,T}}, x::SVe
     return f
 end
 
+# """ Evalute implicit surface value given point x for ForwardDiff. x = [x; coeff; centers] """
+# function eval_surface(x::Vector)
+#     N = length(x)  # (3; M+4; M) = 2M + 7
+#     M = Int((N-7)/2)
+#     z = x[1:3]
+#     c = x[4:M+4]
+#     centers = x[M+5:end]
+#     f = c[M+4]
+#     f += SVector{3,T}(c[M+3], c[M+2], c[M+1])'*z
+#     for i = 1:M
+#         f += c[i]*rbf(z, centers[i])
+#     end
+#     return f
+# end
+#
+# function distance_gradient(c::SVector{M,T}, centers::SVector{N, SVector{P,T}}, x::SVector{P,T}) where {M,N,P,T}
+#     input = Vector{T}(undef, 3+M+N)
+#     input[1:3] = x
+#     input[4:M+4] = c
+#     input[M+5:end] = centers
+#     ∇f = ForwardDiff.gradient(eval_surface, input)
+#     return ∇f
+# end
+
+
 """ Construct implicit surface from closest N environment points to a face """
 function construct_surface(centers::SVector{M, SVector{N,T}}, distances::SVector{M,T}) where {M,N,T}
     A = MMatrix{M+4, M+4, T}(undef)
@@ -48,6 +73,7 @@ function construct_surface(centers::SVector{M, SVector{N,T}}, distances::SVector
     return SVector{M+4,Float64}(c)
 end
 
+""" Create vector for rbf centers """
 function construct_centers(verts::Vector{GeometryTypes.Point{3,T}}, points::SVector{M,SVector{3,T}}, distances::SVector{M,T}) where {M,T,U}
     N = length(verts)
     centers = MVector{M+N, SVector{3,Float64}}(undef)
@@ -63,6 +89,7 @@ function construct_centers(verts::Vector{GeometryTypes.Point{3,T}}, points::SVec
 end
 
 # Meshing functions
+""" Return points and faces of the isosurface of the implicit surface """
 function make_geom(c::SVector{M,T}, centers::SVector{N, SVector{P,T}}, origin::SVector{3,T}, dims::SVector{3,T}, pts::Int) where {M,N,P,T}
     function f_eval(x)
         f = c[N-3] + c[N-2]*x[1] + c[N-1]*x[2] + c[N]*x[3]
@@ -75,12 +102,12 @@ function make_geom(c::SVector{M,T}, centers::SVector{N, SVector{P,T}}, origin::S
     return points, faces
 end
 
+""" Construct mesh compatible with MeshCat
+Args (output of isosurface):
+    -points: Array of vertices
+    -faces: Vertex connectivity graph
+"""
 function make_mesh(points, faces)
-    """ Construct mesh compatible with MeshCat
-    Args (output of isosurface):
-        -points: Array of vertices
-        -faces: Vertex connectivity graph
-    """
     npoints = size(points,1)
     nfaces = size(faces,1)
     meshpoints = Vector{Point3f0}(undef,npoints)
@@ -94,7 +121,8 @@ function make_mesh(points, faces)
     return Mesh(meshpoints, meshfaces)
 end
 
-function make_mesh_dep(c::SVector{M,T}, centers::SVector{N, SVector{P,T}}, origin::SVector{3,T}, dims::SVector{3,T}, resolution::T) where {M,N,P,T}
+""" Make implicit surface mesh with sdf """
+function make_mesh_sdf(c::SVector{M,T}, centers::SVector{N, SVector{P,T}}, origin::SVector{3,T}, dims::SVector{3,T}, resolution::T) where {M,N,P,T}
     function f_eval(x)
         f = c[M-3]
         f += SVector{3,T}(c[M-2], c[M-1], c[M])'*x

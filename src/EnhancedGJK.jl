@@ -7,10 +7,12 @@ import GeometryTypes
 const gt = GeometryTypes
 using CoordinateTransformations: Transformation,
                                  transform_deriv,
-                                 IdentityTransformation
+                                 IdentityTransformation,
+                                 RotZ, RotY, RotX, Translation
 using LinearAlgebra
 using Statistics: mean
 using Meshing
+using ForwardDiff
 # using GeometryBasics: Mesh, TriangleFace, GLTriangleFace, Point3f0
 
 export CollisionCache,
@@ -32,7 +34,7 @@ export CollisionCache,
        eval_surface,
        make_mesh,
        make_geom,
-       make_mesh_dep
+       make_mesh_sdf
 
 include("tagged_points.jl")
 include("simplices.jl")

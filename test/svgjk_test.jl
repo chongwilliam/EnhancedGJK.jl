@@ -14,7 +14,7 @@ poseA = trans
 trans = Translation(SVector{3,Float64}(0,0,0))
 poseB = trans
 
-# Tests
+# Test
 result = gjk(c1, c2, poseA, poseB)
 ref_result = gjk_original(c1, c2, poseA, poseB)
 
@@ -26,6 +26,11 @@ println(separation_distance(ref_result))
 
 @btime gjk(c1, c2, poseA, poseB)
 @btime gjk_original(c1, c2, poseA, poseB)
+
+# Auto-differentiation through gjk
+q = [0., 0., 1.]
+∇f = ForwardDiff.gradient(gjk_diff, q)
+println(∇f)
 
 # Visualization
 vis = Visualizer()

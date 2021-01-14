@@ -264,6 +264,18 @@ function gjk(geomA, geomB,
     gjk!(cache, poseA, poseB)
 end
 
+""" Using ForwardDiff for gradients """
+function gjk_diff(q::AbstractVector{T}) where {T}  # q is generalized coordinates
+    RotA = composed(RotZ(q[6]), composed(RotY(q[5]), RotX(q[4])))
+    TransA = Translation(q[1:3])
+    # RotB = RotZ(RotY(RotX(q[4:6])))
+    # TransB = Translation(q[1:3])
+    poseA = composed(RotA, TransA)
+    poseB = IdentityTransformation
+    result = gjk(c1, c2, poseA, poseB)
+    return separation_distance(result)
+end
+
 #---
 ### Original functions ###
 function gjk_original!(cache::CollisionCache,

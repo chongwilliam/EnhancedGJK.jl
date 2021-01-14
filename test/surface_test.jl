@@ -44,7 +44,7 @@ println(separation_distance(_result))
 # Create implicit surface mesh
 # surf_pts, surf_faces = make_geom(coeff, centers, SVector{3,T}(1,1,1), SVector{3,T}(2,2,2), 20)
 # mesh = make_mesh(surf_pts, surf_faces)
-mesh = make_mesh_dep(coeff, centers, SVector{3,T}(-0.5,-0.5,-0.5), SVector{3,T}(2,2,2), 0.001)
+mesh = make_mesh_dep(coeff, centers, SVector{3,T}(-0.5,-0.5,-0.5), SVector{3,T}(2,2,2), 0.005)
 
 # # get vertices, normals, and faces to create HomogenousMesh
 # _vertices = GeometryBasics.decompose(GeometryBasics.Point{3,T}, mesh)
@@ -57,7 +57,7 @@ mesh = make_mesh_dep(coeff, centers, SVector{3,T}(-0.5,-0.5,-0.5), SVector{3,T}(
 vis = Visualizer()
 open(vis)
 
-setobject!(vis["mesh/1"], c1, MeshPhongMaterial(color=RGBA{Float32}(1.0,0.0,0.0,0.2)))
+setobject!(vis["mesh/1"], c1, MeshPhongMaterial(color=RGBA{Float32}(1.0,1.0,0.9,0.9)))
 setobject!(vis["mesh/2"], c2)
 setobject!(vis["mesh/surface"], mesh, MeshPhongMaterial(color=RGBA{Float32}(0.0,1.0,0.0,0.9)))
 # setobject!(vis["mesh/surface"], mesh)
@@ -70,3 +70,6 @@ dist_vec = ArrowVisualizer(vis["dist/a"])
 setobject!(dist_vec, MeshLambertMaterial(color=RGBA{Float32}(0, 1, 0, 0.5)))
 settransform!(dist_vec, gt.Point(poseA(result.closest_point_in_body.a)),
     gt.Point(poseB(result.closest_point_in_body.b)))  # poseB transformation
+
+# delete tasks
+delete!(vis["mesh/surface"])
