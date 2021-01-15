@@ -121,7 +121,7 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     facets_test = compare_signs.(nu_max, C)
 
     # Calculate minimum support set and associated weights
-    if facets_test[1] == facets_test[2] == facets_test[3]
+    if facets_test[1] == facets_test[2] == facets_test[3] == true
         weights = C / nu_max
         weights = order_weights(weights, wids)
         return weights, wids, 3
