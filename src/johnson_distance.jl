@@ -51,7 +51,6 @@ function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
         new_wids = SVector{4,Int}(1, 2, 3, 4)
         return weights, new_wids, 4
     else
-<<<<<<< HEAD
         d_min = Inf
         best_weights, best_wids, best_nvrtx = undef, undef, undef
         tmp_weights, tmp_wids, tmp_nvrtx = undef, undef, undef
@@ -71,21 +70,6 @@ function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
                 v_len = dot(v, v)
                 if v_len < d_min
                     best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, tmp_wids, tmp_nvrtx
-=======
-        # print("S3D Condition 2", "\n")
-        d = Inf
-        for i = 1:4
-            if FacetsTest[i] == 0
-                new_ind = MVector{4,Int}(1, 1, 1, 1)
-                new_ind[i] = 0
-                lam_new, w_new = S2D(simplex, new_ind, opt)  # exclude index i
-                v_new = linear_combination(lam_new, simplex)
-                d_new = LinearAlgebra.dot(v_new, v_new)
-                if d_new < d
-                    lam = lam_new
-                    d = d_new
-                    w_ind = w_new
->>>>>>> cd679f9195fd8090a83901a29cfdc160af9a22d2
                 end
             end
         end
@@ -142,7 +126,6 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
         weights = order_weights(weights, wids)
         return weights, wids, 3
     else
-<<<<<<< HEAD
         d_min = Inf
         best_weights, best_wids, best_nvrtx = undef, undef, undef
         tmp_weights, tmp_wids, tmp_nvrtx = undef, undef, undef
@@ -160,21 +143,6 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
                 v_len = dot(v, v)
                 if v_len < d_min
                     best_weights, d_min, best_wids, best_nvrtx = tmp_weights, v_len, tmp_wids, tmp_nvrtx
-=======
-        # print("S2D Condition 2", "\n")
-        d = Inf
-        for i = 1:3
-            if FacetsTest[i] == 0
-                new_ind = MVector(ind)  # bit array carried over from function input
-                new_ind[actual_ind[i]] = 0  # remove the actual i-th coordinate
-                lam_new, w_new = S1D(simplex, new_ind)
-                v_new = linear_combination(lam_new, simplex)
-                d_new = LinearAlgebra.dot(v_new, v_new)
-                if d_new < d
-                    lam = lam_new
-                    d = d_new
-                    w_ind = w_new
->>>>>>> cd679f9195fd8090a83901a29cfdc160af9a22d2
                 end
             end
         end
@@ -194,7 +162,7 @@ function S1D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     # Unpack simplex in wids order
     _s = view(simplex[_wids],:)
 
-    # Calculate projection 
+    # Calculate projection
     AB = _s[2] - _s[1]
     t = - dot(_s[1], AB) / dot(AB, AB)  # s(t) = (1-t)*s1 + t*s2
 
