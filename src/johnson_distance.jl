@@ -219,10 +219,10 @@ function S1D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     # println("S1D")
 
     # Unpack indices
-    _wids = view(wids,1:4)
+    _wids = view(wids,1:2)
 
     # Unpack simplex in wids order
-    _s = view(simplex[wids],1:2)
+    _s = view(simplex[_wids],:)
 
     ### Version 3 ###
     AB = _s[2] - _s[1]

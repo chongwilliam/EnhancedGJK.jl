@@ -178,7 +178,7 @@ function gjk!(cache::CollisionCache,
             support_vector_max(cache.bodyA, direction_in_A, starting_vertex.a),
             support_vector_max(cache.bodyB, -direction_in_B, starting_vertex.b))
         improved_point = poseA(value(improved_vertex.a)) - poseB(value(improved_vertex.b))
-        score = dot(improved_point, direction)  # best_point = v_k; improved_point = w_k
+        # score = dot(improved_point, direction)  # best_point = v_k; improved_point = w_k
 
         # println("***")
         # println("pre-update improved point: ", improved_point)
