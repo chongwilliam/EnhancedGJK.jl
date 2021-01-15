@@ -131,7 +131,6 @@ function make_mesh_sdf(c::SVector{M,T}, centers::SVector{N, SVector{P,T}}, origi
         end
         return f
     end
-    # sdf = SignedDistanceField(f_eval, HyperRectangle(Vec(-1, -1, -1), Vec(2, 2, 2)))
     sdf = gt.SignedDistanceField(f_eval, gt.HyperRectangle(gt.Vec(origin), gt.Vec(dims)), resolution)
     mesh = gt.HomogenousMesh(sdf, MarchingTetrahedra())
     return mesh

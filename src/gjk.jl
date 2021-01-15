@@ -178,10 +178,6 @@ function gjk!(cache::CollisionCache,
             support_vector_max(cache.bodyA, direction_in_A, starting_vertex.a),
             support_vector_max(cache.bodyB, -direction_in_B, starting_vertex.b))
         improved_point = poseA(value(improved_vertex.a)) - poseB(value(improved_vertex.b))
-        # score = dot(improved_point, direction)  # best_point = v_k; improved_point = w_k
-
-        # println("***")
-        # println("pre-update improved point: ", improved_point)
 
         # Primary termination conditions
         v_len = dot(best_point, best_point)
@@ -204,14 +200,10 @@ function gjk!(cache::CollisionCache,
             cache.simplex_points[index_to_replace] = improved_vertex
             simplex = setindex(simplex, improved_point, index_to_replace)
             prev_wids = wids[1:nvrtx]
-            # println("pre-update wids: ", wids)
-            # println("pre-update vrtx: ", nvrtx)
-            # println("pre-update previous wids: ", prev_wids)
         end
 
         # Calculate new weights and support set W
         weights, wids, nvrtx = signed_volume(simplex, wids, nvrtx)
-        # min_weight, index_to_replace = findmin(weights)
 
         # Secondary termination conditions
         # best_point = linear_combination(weights, simplex)
@@ -228,10 +220,6 @@ function gjk!(cache::CollisionCache,
             closest_point_in_body = linear_combination(weights, cache.simplex_points)
             return GJKResult(simplex, weights, true, closest_point_in_body, nvrtx, wids, iter, 4)
         end
-
-        # println("post-update nvrtx: ", nvrtx)
-        # println("post-update weights: ", weights)
-        # println("post-update wids: ", wids)
 
         iter += 1
     end

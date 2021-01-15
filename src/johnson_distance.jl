@@ -33,52 +33,17 @@ end
 S3D function for determining minimum active support set for tetrahedron and associated weights.
 """
 function S3D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
-    # println("S3D")
-
-    # Unpack indices
-    # _wids = view(wids,:)
-
     # Unpack simplex in wids order
-    # _s = view(simplex[_wids],:)
     _s = view(simplex,1:4)
 
     # Calculate signed determinants to compare tetrahedron orientations
-    ### Version 1 ###
-    # M41 = bcd, M42 = acd, M43 = abd, M44 = abc
-    # M_mat = SMatrix{4,4,T}(_s[1][1],_s[1][2],_s[1][3],1,_s[2][1],_s[2][2],_s[2][3],1,_s[3][1],_s[3][2],_s[3][3],1,_s[4][1],_s[4][2],_s[4][3],1)
     M_41 = SMatrix{3,3,T}(_s[2][1],_s[2][2],_s[2][3],_s[3][1],_s[3][2],_s[3][3],_s[4][1],_s[4][2],_s[4][3])
     M_42 = SMatrix{3,3,T}(_s[1][1],_s[1][2],_s[1][3],_s[3][1],_s[3][2],_s[3][3],_s[4][1],_s[4][2],_s[4][3])
     M_43 = SMatrix{3,3,T}(_s[1][1],_s[1][2],_s[1][3],_s[2][1],_s[2][2],_s[2][3],_s[4][1],_s[4][2],_s[4][3])
     M_44 = SMatrix{3,3,T}(_s[1][1],_s[1][2],_s[1][3],_s[2][1],_s[2][2],_s[2][3],_s[3][1],_s[3][2],_s[3][3])
     C = SVector{4,T}(-det(M_41), det(M_42), -det(M_43), det(M_44))
     detM = sum(C)
-    # detM = det(M_mat)
     facets_test = compare_signs.(detM, C)
-
-    # println("S3D C: ", C)
-
-    ### Version 2 ###
-    # a1, a2, a3 = simplex[s[1]]
-    # b1, b2, b3 = simplex[s[2]]
-    # c1, c2, c3 = simplex[s[3]]
-    # d1, d2, d3 = simplex[s[4]]
-    # M_41 = SMatrix{3,3,T}(b1,b2,b3,c1,c2,c3,d1,d2,d3)  # wrt s ordering
-    # M_42 = SMatrix{3,3,T}(a1,a2,a3,c1,c2,c3,d1,d2,d3)
-    # M_43 = SMatrix{3,3,T}(a1,a2,a3,b1,b2,b3,d1,d2,d3)
-    # M_44 = SMatrix{3,3,T}(a1,a2,a3,b1,b2,b3,c1,c2,c3)
-    # C = SVector{4,T}(-det(M_41), det(M_42), -det(M_43), det(M_44))
-    # detM = sum(C)
-    # facets_test = compare_signs.(detM, C)
-
-    ### Version 3 ###
-    # a, b, c, d = simplex[_wids[1]], simplex[_wids[2]], simplex[_wids[3]], simplex[_wids[4]]
-    # B1 = -1*(b[1]*c[2]*d[3] - b[1]*c[3]*d[2] - b[2]*c[1]*d[3] + b[2]*c[3]*d[1] + b[3]*c[1]*d[2] - b[3]*c[2]*d[1])
-    # B2 = a[1]*c[2]*d[3] - a[1]*c[3]*d[2] - a[2]*c[1]*d[3] + a[2]*c[3]*d[1] + a[3]*c[1]*d[2] - a[3]*c[2]*d[1]
-    # B3 = -1*(a[1]*b[2]*d[3] - a[1]*b[3]*d[2] - a[2]*b[1]*d[3] + a[2]*b[3]*d[1] + a[3]*b[1]*d[2] - a[3]*b[2]*d[1])
-    # B4 = a[1]*b[2]*c[3] - a[1]*b[3]*c[2] - a[2]*b[1]*c[3] + a[2]*b[3]*c[1] + a[3]*b[1]*c[2] - a[3]*b[2]*c[1]
-    # C = SVector{4,T}(B1, B2, B3, B4)
-    # detM = sum(C)
-    # facets_test = compare_signs.(detM, C)
 
     # Calculate minimum support set and associated weights
     if facets_test[1] == facets_test[2] == facets_test[3] == facets_test[4] == true
@@ -117,9 +82,6 @@ S2D function for determining minimum active support set for plane (triangle) and
 Modification to the original algorithm by rotating the plane to a flat orientation.
 """
 function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
-    # println("S2D")
-    # println("wids: ", wids)
-
     # Unpack indices
     _wids = view(wids,1:4)
 
@@ -133,7 +95,6 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     p = (dot(_s[1], n)*n) / dot(n, n)
     _p = view(p,1:3)
 
-    ### Version 0 ###
     # Calculated signed determinants
     # ABC
     xyABC = SMatrix{3,3,T}(_s[1][1], _s[1][2], 1, _s[2][1], _s[2][2], 1, _s[3][1], _s[3][2], 1)
@@ -152,34 +113,12 @@ function S2D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     nu_max = signed_area[I3]
     # ABP vs. ABC
     ABP = SMatrix{3,3,T}(_s[1][I1], _s[1][I2], 1, _s[2][I1], _s[2][I2], 1, _p[I1], _p[I2], 1)
-    # BCP
+    # BCP vs. BCA
     BCP = SMatrix{3,3,T}(_s[2][I1], _s[2][I2], 1, _s[3][I1], _s[3][I2], 1, _p[I1], _p[I2], 1)
-    # ACP
+    # ACP vs. ACB
     ACP = SMatrix{3,3,T}(_s[1][I1], _s[1][I2], 1, _s[3][I1], _s[3][I2], 1, _p[I1], _p[I2], 1)
     C = SVector{4,T}(det(BCP), -det(ACP), det(ABP), 0)  # wrt s ordering
     facets_test = compare_signs.(nu_max, C)
-
-    # println("S2D C: ", C)
-    # println("S2D nu_max: ", nu_max)
-
-    ### Version 1 ###
-    # # Rotate vectors
-    # t1_hat = AB / norm(AB)
-    # n_hat = n / norm(n)
-    # t2_hat = cross(n_hat, t1_hat)
-    # _t1, _n, _t2 = view(t1_hat,:), view(n_hat,:), view(t2_hat,:)
-    # rotated_vectors =
-    # SMatrix{3,3,T}(_t1[1], _t2[1], _n[1], _t1[2], _t2[2], _n[2], _t1[3], _t2[3], _n[3]) * SMatrix{3,4,T}(_s[1][1],_s[1][2],_s[1][3],_s[2][1],_s[2][2],_s[2][3],_s[3][1],_s[3][2],_s[3][3],_p[1],_p[2],_p[3])
-    # _v = view(rotated_vectors,:)
-    #
-    # # Signed determinants
-    # M_mat = SMatrix{3,3,T}(_v[1],_v[2],1,_v[4],_v[5],1,_v[7],_v[8],1)
-    # nu_max = det(M_mat)
-    # M_31 = SMatrix{3,3,T}(_v[4],_v[5],1,_v[7],_v[8],1,_v[10],_v[11],1)  # BC
-    # M_32 = SMatrix{3,3,T}(_v[1],_v[2],1,_v[7],_v[8],1,_v[10],_v[11],1)  # AC
-    # M_33 = SMatrix{3,3,T}(_v[1],_v[2],1,_v[4],_v[5],1,_v[10],_v[11],1)  # AB
-    # C = SVector{4,T}(det(M_31), -det(M_32), det(M_33), 0)  # wrt s ordering
-    # facets_test = compare_signs.(nu_max, C)
 
     # Calculate minimum support set and associated weights
     if facets_test[1] == facets_test[2] == facets_test[3]
@@ -216,7 +155,6 @@ S1D function for determining minimum active support set for line and associated 
 Modification to the original algorithm with the calculation of the weights.
 """
 function S1D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,P}
-    # println("S1D")
 
     # Unpack indices
     _wids = view(wids,1:2)
@@ -224,7 +162,7 @@ function S1D(simplex::SVector{M,SVector{N,T}}, wids::SVector{M,P}) where {M,N,T,
     # Unpack simplex in wids order
     _s = view(simplex[_wids],:)
 
-    ### Version 3 ###
+    # Calculate projection 
     AB = _s[2] - _s[1]
     t = - dot(_s[1], AB) / dot(AB, AB)  # s(t) = (1-t)*s1 + t*s2
 
