@@ -28,7 +28,7 @@ println(separation_distance(ref_result))
 @btime gjk_original(c1, c2, poseA, poseB)
 
 # Auto-differentiation through gjk
-q = [0., 0., 1.]
+q = [0.,0.,0.1,0.,0.,0.]
 ∇f = ForwardDiff.gradient(gjk_diff, q)
 println(∇f)
 

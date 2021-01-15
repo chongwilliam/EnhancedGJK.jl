@@ -7,8 +7,7 @@ import GeometryTypes
 const gt = GeometryTypes
 using CoordinateTransformations: Transformation,
                                  transform_deriv,
-                                 IdentityTransformation,
-                                 RotZ, RotY, RotX, Translation
+                                 IdentityTransformation
 using LinearAlgebra
 using Statistics: mean
 using Meshing
@@ -18,7 +17,7 @@ using ForwardDiff
 export CollisionCache,
        gjk!,  # signed volume method
        gjk,  # signed volume method
-       body_simplex,  # return simplex points on body
+       body_simplex,  # return simplex points on body in body frame 
        gjk_original!, # johnson method
        gjk_original,  # johnson method
        GJKResult,

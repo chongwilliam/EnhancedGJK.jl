@@ -44,7 +44,7 @@ println(separation_distance(_result))
 # Create implicit surface mesh
 # surf_pts, surf_faces = make_geom(coeff, centers, SVector{3,T}(1,1,1), SVector{3,T}(2,2,2), 20)
 # mesh = make_mesh(surf_pts, surf_faces)
-mesh = make_mesh_dep(coeff, centers, SVector{3,T}(-0.5,-0.5,-0.5), SVector{3,T}(2,2,2), 0.005)
+mesh = make_mesh_sdf(coeff, centers, SVector{3,T}(-0.5,-0.5,-0.5), SVector{3,T}(2,2,2), 0.005)
 
 # # get vertices, normals, and faces to create HomogenousMesh
 # _vertices = GeometryBasics.decompose(GeometryBasics.Point{3,T}, mesh)

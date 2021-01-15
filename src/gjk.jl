@@ -102,7 +102,6 @@ struct GJKResult{M, N, T}
     nvrtx::Int
     wids::SVector{M, Int}
     iterations::Int
-    # mesh_simplex::SVector{P, SVector{N, T}}  # in inertial frame; needs to be transformed to body frame A with poseA(value(cache.simplex_points[i].a))
     termination::Int
 end
 
@@ -119,17 +118,12 @@ function Base.getproperty(result::GJKResult, sym::Symbol)
     end
 end
 
-# Calculate active simplex points of privileged object for neighbor matching in PCA
-# function revert_simplex(wids, cache, poseA)
-""" Actually can recover from the modified cache outside of loop """
-function body_simplex(cache::CollisionCache, wids::SVector{M, Int}, nvrtx::Int) where {M}  # return without poseA because of dual number type
+""" Calculate active simplex points of privileged object for neighbor matching in implicit surface in body frame.  """
+function body_simplex(cache::CollisionCache, wids::SVector{M, Int}, nvrtx::Int) where {M}
     simplex_points = [value(cache.simplex_points[i].a) for i in wids[1:nvrtx]]
     # T = typeof(simplex_points[1][2])  # Number type
-    T = Float64
-    return SVector{nvrtx, SVector{3, T}}(simplex_points)
+    return SVector{nvrtx, SVector{3, Float64}}(simplex_points)
 end
-
-# mesh_simplex = body_simplex(cache, wids, nvrtx)
 
 closest_point_in_world(result::GJKResult) = linear_combination(result.simplex, result.weights)
 closest_point_in_body(result::GJKResult) = result.closest_point_in_body
