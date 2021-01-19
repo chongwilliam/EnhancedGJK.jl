@@ -107,7 +107,7 @@ end
 
 function Base.getproperty(result::GJKResult, sym::Symbol)
     if sym === :signed_distance
-        @warn "The `signed_distance` field was removed. Please use the `separation_distance` and `simplex_penetration_distance` functions."
+        # @warn "The `signed_distance` field was removed. Please use the `separation_distance` and `simplex_penetration_distance` functions."
         if result.in_collision
             return -simplex_penetration_distance(result)
         else

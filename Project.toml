@@ -4,6 +4,7 @@ version = "0.4.0"
 
 [deps]
 CoordinateTransformations = "150eb455-5306-5404-9cee-2592286d6298"
+DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 GeometryTypes = "4d00f742-c7ba-57c2-abde-4428a4b178cb"
